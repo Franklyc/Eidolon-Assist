@@ -335,7 +335,7 @@ class TTSAudioConverter(QThread):
                 # 0.0 -> -100%, 0.5 -> 0%, 1.0 -> +100%
                 volume_percent = int((volume_float * 2 - 1) * 100)
                 # 限制到合理范围（-100%到+100%）
-                volume_percent = max(-100, min(100))
+                volume_percent = max(-100, min(100, volume_percent))
                 # 按照Edge TTS要求格式化
                 volume = f"{volume_percent:+d}%"
                 

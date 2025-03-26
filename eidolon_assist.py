@@ -275,18 +275,17 @@ class LLMThread(QThread):
             self.status_update.emit(f"AI error: {str(e)}")
             self.finished.emit("")
 
-class TTSThread(QThread):
-    """Thread for text-to-speech using Edge TTS"""
-    finished = pyqtSignal()
+class TTSAudioConverter(QThread):
+    """专门用于文本到语音音频文件转换的线程，不负责播放"""
+    finished = pyqtSignal(str)  # 发送生成的音频文件路径
     status_update = pyqtSignal(str)
     
     def __init__(self, text, settings):
         super().__init__()
-        # Clean text by removing or replacing special symbols
+        # 清理文本中不应该被朗读的符号
         self.text = self.clean_text_for_speech(text)
         self.settings = settings
         self.stop_requested = False
-        self.sentence_queue = Queue()
         self.loop = None
     
     def clean_text_for_speech(self, text):
@@ -314,80 +313,66 @@ class TTSThread(QThread):
         
     def run(self):
         try:
-            self.status_update.emit("Converting to speech...")
+            self.status_update.emit(f"正在转换音频: '{self.text[:20]}...'")
             
-            # Create a temporary file for the audio
+            # 为音频创建临时文件
             temp_file = tempfile.mktemp(suffix=".mp3")
             
-            # Create and set a new event loop for this thread
+            # 在此线程中创建并设置事件循环
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
             
-            # Use Edge TTS to convert text to speech with specified rate and volume
+            # 使用Edge TTS将文本转换为语音，并应用指定的速率和音量
             async def convert_to_speech():
                 voice = self.settings["tts_voice"]
                 rate = self.settings.get("tts_speed", "+0%")
                 
-                # Format volume according to Edge TTS documentation
-                # Edge TTS expects volume as a string like "+0%" (default), "+50%" (louder) or "-50%" (quieter)
+                # 根据Edge TTS文档格式化音量
+                # Edge TTS需要音量为类似"+0%"（默认），"+50%"（更大声）或"-50%"（更小声）的字符串
                 volume_float = self.settings.get("tts_volume", 1.0)
                 
-                # Convert 0.0-1.0 to a percentage between -100% and +100%
+                # 将0.0-1.0转换为-100%到+100%之间的百分比
                 # 0.0 -> -100%, 0.5 -> 0%, 1.0 -> +100%
                 volume_percent = int((volume_float * 2 - 1) * 100)
-                # Clamp to a reasonable range (-100% to +100%)
-                volume_percent = max(-100, min(100, volume_percent))
-                # Format as required by Edge TTS 
+                # 限制到合理范围（-100%到+100%）
+                volume_percent = max(-100, min(100))
+                # 按照Edge TTS要求格式化
                 volume = f"{volume_percent:+d}%"
                 
-                # Create communicate object with voice, rate and volume options
+                # 创建带有语音、速率和音量选项的通信对象
                 communicate = edge_tts.Communicate(self.text, voice, rate=rate, volume=volume)
                 await communicate.save(temp_file)
             
-            # Run the async function in this thread's event loop
+            # 在此线程的事件循环中运行异步函数
             self.loop.run_until_complete(convert_to_speech())
             
             if self.stop_requested:
-                self.status_update.emit("TTS canceled")
+                self.status_update.emit("TTS转换已取消")
                 try:
                     os.remove(temp_file)
                 except:
                     pass
-                # Properly close the loop
+                # 正确关闭循环
                 self.loop.close()
-                self.finished.emit()
+                self.finished.emit("")
                 return
                 
-            self.status_update.emit("Playing audio...")
-            
-            # Play the audio
-            data, samplerate = sf.read(temp_file)
-            sd.play(data, samplerate)
-            sd.wait()
-            
-            # Clean up temporary file
-            try:
-                os.remove(temp_file)
-            except:
-                pass
-                
-            # Properly close the loop to prevent "Event loop is closed" errors
+            # 正确关闭循环以防止"Event loop is closed"错误
             self.loop.close()
             
-            self.status_update.emit("TTS complete")
-            self.finished.emit()
+            self.status_update.emit("TTS转换完成")
+            self.finished.emit(temp_file)  # 发送生成的音频文件路径
             
         except Exception as e:
-            self.status_update.emit(f"TTS error: {str(e)}")
-            # Make sure we close the loop even on error
+            self.status_update.emit(f"TTS转换错误: {str(e)}")
+            # 确保即使出错也关闭循环
             if self.loop and not self.loop.is_closed():
                 self.loop.close()
-            self.finished.emit()
+            self.finished.emit("")
     
     def stop(self):
         self.stop_requested = True
-        sd.stop()
-        # Make sure we properly close the event loop if it exists
+        # 确保如果存在事件循环则正确关闭它
         if self.loop and not self.loop.is_closed():
             async def close_loop():
                 pass
@@ -396,6 +381,254 @@ class TTSThread(QThread):
                 self.loop.close()
             except:
                 pass
+
+
+class AudioPlayer(QThread):
+    """专门用于播放音频文件的线程"""
+    finished = pyqtSignal()
+    status_update = pyqtSignal(str)
+    
+    def __init__(self, audio_file):
+        super().__init__()
+        self.audio_file = audio_file
+        self.stop_requested = False
+        
+    def run(self):
+        try:
+            if not os.path.exists(self.audio_file):
+                self.status_update.emit("找不到音频文件")
+                self.finished.emit()
+                return
+                
+            self.status_update.emit("播放音频...")
+            
+            # 播放音频
+            data, samplerate = sf.read(self.audio_file)
+            sd.play(data, samplerate)
+            sd.wait()
+            
+            if self.stop_requested:
+                self.status_update.emit("音频播放已停止")
+                self.finished.emit()
+                return
+            
+            self.status_update.emit("音频播放完成")
+            
+            # 删除临时文件
+            try:
+                os.remove(self.audio_file)
+            except:
+                pass
+                
+            self.finished.emit()
+            
+        except Exception as e:
+            self.status_update.emit(f"音频播放错误: {str(e)}")
+            self.finished.emit()
+    
+    def stop(self):
+        self.stop_requested = True
+        sd.stop()
+
+
+class ParallelTTSProcessor:
+    """管理TTS文本并行处理和顺序播放的类"""
+    def __init__(self, settings):
+        self.settings = settings
+        self.tts_queue = Queue()  # 文本队列
+        self.audio_queue = Queue()  # 已转换音频文件队列
+        
+        self.is_processing = False
+        self.is_playing = False
+        
+        # 当前活动线程
+        self.current_converter = None
+        self.current_player = None
+        self.next_converter = None  # 用于并行准备下一个音频
+        
+        # 状态回调
+        self.status_callback = None
+        
+        # 调试标志
+        self.debug = True
+        
+    def set_status_callback(self, callback):
+        """设置状态更新的回调函数"""
+        self.status_callback = callback
+        
+    def update_status(self, message):
+        """更新状态消息"""
+        if self.status_callback:
+            self.status_callback(message)
+        elif self.debug:
+            print(f"TTS状态: {message}")
+        
+    def add_text(self, text):
+        """添加文本到TTS队列"""
+        if text and text.strip():
+            self.update_status(f"添加文本到队列: '{text[:20]}...'")
+            self.tts_queue.put(text)
+            
+            # 如果处理器尚未启动，则开始处理
+            if not self.is_processing:
+                self.update_status("启动TTS处理")
+                self.start_processing()
+                
+    def start_processing(self):
+        """开始处理TTS队列"""
+        self.is_processing = True
+        self.process_next_text()
+        
+    def process_next_text(self):
+        """处理队列中的下一个文本"""
+        if self.tts_queue.empty():
+            if not self.is_playing and self.audio_queue.empty():
+                self.is_processing = False
+                self.update_status("TTS处理完成")
+            return
+        
+        # 获取下一个文本
+        text = self.tts_queue.get()
+        self.update_status(f"开始转换文本: '{text[:20]}...'")
+        
+        # 创建并启动转换器
+        self.current_converter = TTSAudioConverter(text, self.settings)
+        self.current_converter.status_update.connect(self.update_status)
+        self.current_converter.finished.connect(self.on_conversion_finished)
+        self.current_converter.start()
+        
+        # 如果队列中还有更多文本，立即开始并行转换下一个
+        if not self.tts_queue.empty() and self.next_converter is None:
+            next_text = self.tts_queue.get()
+            self.update_status(f"开始并行转换下一段文本: '{next_text[:20]}...'")
+            self.next_converter = TTSAudioConverter(next_text, self.settings)
+            self.next_converter.status_update.connect(self.update_status)
+            self.next_converter.finished.connect(self.on_next_conversion_finished)
+            self.next_converter.start()
+    
+    def on_conversion_finished(self, audio_file):
+        """当前文本转换完成的回调"""
+        if audio_file:
+            self.update_status("当前转换完成，添加到音频队列")
+            # 将转换好的音频加入队列
+            self.audio_queue.put(audio_file)
+            # 如果没有正在播放，开始播放
+            if not self.is_playing:
+                self.update_status("开始播放第一段音频")
+                self.play_next_audio()
+        else:
+            self.update_status("当前转换失败或被取消")
+        
+        # 清除完成的转换器引用
+        temp_converter = self.current_converter
+        self.current_converter = None
+        
+        # 确保线程对象能够被垃圾回收
+        if temp_converter:
+            temp_converter.deleteLater()
+                
+        # 处理队列中的下一个文本，但仅当没有正在并行转换的任务时
+        if not self.next_converter:
+            self.update_status("检查是否有更多文本需要处理")
+            self.process_next_text()
+    
+    def on_next_conversion_finished(self, audio_file):
+        """并行转换的下一个文本完成的回调"""
+        if audio_file:
+            self.update_status("并行转换完成，添加到音频队列")
+            # 将转换好的音频加入队列
+            self.audio_queue.put(audio_file)
+            # 如果没有正在播放，开始播放
+            if not self.is_playing:
+                self.update_status("开始播放并行转换的音频")
+                self.play_next_audio()
+        else:
+            self.update_status("并行转换失败或被取消")
+        
+        # 清除完成的转换器引用
+        temp_converter = self.next_converter
+        self.next_converter = None
+        
+        # 确保线程对象能够被垃圾回收
+        if temp_converter:
+            temp_converter.deleteLater()
+        
+        # 只有当当前转换也完成时，才处理下一个
+        if not self.current_converter:
+            self.update_status("尝试处理更多文本")
+            self.process_next_text()
+            
+    def play_next_audio(self):
+        """播放队列中的下一个音频"""
+        if self.audio_queue.empty():
+            self.is_playing = False
+            self.update_status("音频队列为空")
+            # 如果没有更多的文本要处理，处理完成
+            if self.tts_queue.empty() and not self.current_converter and not self.next_converter:
+                self.is_processing = False
+                self.update_status("所有TTS处理和播放完成")
+            return
+        
+        self.is_playing = True
+        audio_file = self.audio_queue.get()
+        
+        self.update_status(f"开始播放音频: {os.path.basename(audio_file)}")
+        
+        # 创建并启动播放器
+        self.current_player = AudioPlayer(audio_file)
+        self.current_player.status_update.connect(self.update_status)
+        self.current_player.finished.connect(self.on_audio_finished)
+        self.current_player.start()
+    
+    def on_audio_finished(self):
+        """音频播放完成的回调"""
+        self.update_status("一段音频播放完成")
+        
+        # 清除播放器引用
+        temp_player = self.current_player
+        self.current_player = None
+        
+        # 确保线程对象能够被垃圾回收
+        if temp_player:
+            temp_player.deleteLater()
+            
+        # 播放下一个音频
+        self.update_status("尝试播放下一段音频")
+        self.play_next_audio()
+    
+    def stop(self):
+        """停止所有TTS处理和播放"""
+        self.update_status("正在停止所有TTS处理和播放")
+        
+        # 停止当前转换
+        if self.current_converter:
+            self.current_converter.stop()
+            
+        # 停止下一个并行转换（如果有）
+        if self.next_converter:
+            self.next_converter.stop()
+            
+        # 停止当前播放
+        if self.current_player:
+            self.current_player.stop()
+            
+        # 清空队列
+        while not self.tts_queue.empty():
+            self.tts_queue.get()
+            
+        # 清空音频队列并删除临时文件
+        while not self.audio_queue.empty():
+            audio_file = self.audio_queue.get()
+            try:
+                if os.path.exists(audio_file):
+                    os.remove(audio_file)
+            except:
+                pass
+                
+        self.is_processing = False
+        self.is_playing = False
+        
+        self.update_status("TTS播放已停止")
 
 class SettingsDialog(QDialog):
     """Dialog for configuring application settings"""
@@ -683,10 +916,8 @@ class EidolonAssistApp(QMainWindow):
         self.recorder = None
         self.transcriber = None
         self.llm_thread = None
-        self.tts_thread = None
-        self.current_tts_text = ""
-        self.tts_queue = Queue()
-        self.is_processing_tts_queue = False
+        self.tts_processor = ParallelTTSProcessor(self.settings)
+        self.tts_processor.set_status_callback(self.update_status)
         
         # Create UI
         self.init_ui()
@@ -743,14 +974,23 @@ class EidolonAssistApp(QMainWindow):
         conversation_container = BlurredWidget()
         conversation_layout = QVBoxLayout(conversation_container)
         
+        # 添加对话标题和新对话按钮的水平布局
+        conversation_header = QHBoxLayout()
+        
         conversation_label = QLabel("Conversation")
         conversation_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        conversation_header.addWidget(conversation_label)
+        
+        # 添加新对话按钮
+        new_conversation_btn = QPushButton("新对话")
+        new_conversation_btn.clicked.connect(self.clear_conversation_history)
+        conversation_header.addWidget(new_conversation_btn)
         
         self.conversation_text = QTextEdit()
         self.conversation_text.setReadOnly(True)
         self.conversation_text.setStyleSheet("background-color: rgba(255, 255, 255, 150); border-radius: 10px; padding: 10px;")
         
-        conversation_layout.addWidget(conversation_label)
+        conversation_layout.addLayout(conversation_header)
         conversation_layout.addWidget(self.conversation_text)
         
         # Screenshots area
@@ -898,6 +1138,9 @@ class EidolonAssistApp(QMainWindow):
         """Start audio recording"""
         if self.is_recording:
             return
+        
+        # 先停止正在进行的TTS播放
+        self.stop_tts()
             
         self.is_recording = True
         self.record_btn.setText("Stop Recording (Ctrl+])")
@@ -1063,55 +1306,11 @@ class EidolonAssistApp(QMainWindow):
     
     def speak_text(self, text):
         """Convert text to speech and play it"""
-        # Add the text to the queue
-        self.tts_queue.put(text)
-        
-        # Start processing the queue if not already processing
-        if not self.is_processing_tts_queue:
-            self.process_tts_queue()
-    
-    def process_tts_queue(self):
-        """Process the TTS queue one item at a time"""
-        if self.tts_queue.empty():
-            self.is_processing_tts_queue = False
-            return
-        
-        self.is_processing_tts_queue = True
-        text = self.tts_queue.get()
-        
-        # Stop any existing TTS playback
-        if self.tts_thread and self.tts_thread.isRunning():
-            self.tts_thread.stop()
-            # Wait a bit for the thread to properly stop
-            QTimer.singleShot(100, lambda: self.start_new_tts(text))
-        else:
-            self.start_new_tts(text)
-    
-    def start_new_tts(self, text):
-        """Start a new TTS thread with the given text"""
-        self.current_tts_text = text
-        self.tts_thread = TTSThread(text, self.settings)
-        self.tts_thread.status_update.connect(self.update_status)
-        self.tts_thread.finished.connect(self.on_tts_finished)
-        self.tts_thread.start()
-    
-    def on_tts_finished(self):
-        """Handler for when TTS playback is complete"""
-        self.update_status("TTS complete")
-        # Process the next item in the queue, if any
-        QTimer.singleShot(100, self.process_tts_queue)
+        self.tts_processor.add_text(text)
     
     def stop_tts(self):
         """Stop the current TTS playback and clear the queue"""
-        if self.tts_thread and self.tts_thread.isRunning():
-            self.tts_thread.stop()
-            
-        # Clear the TTS queue
-        while not self.tts_queue.empty():
-            self.tts_queue.get()
-            
-        self.is_processing_tts_queue = False
-        self.update_status("TTS playback stopped")
+        self.tts_processor.stop()
     
     def take_screenshot(self):
         """Take a screenshot of the entire screen"""
@@ -1234,16 +1433,28 @@ class EidolonAssistApp(QMainWindow):
         self.status_label.setText(message)
         print(message)  # Also log to console for debugging
     
+    def clear_conversation_history(self):
+        """清除所有对话历史记录，开始新对话"""
+        # 停止任何正在进行的 TTS 播放
+        self.stop_tts()
+        
+        # 清除历史记录数组
+        self.conversation_history = []
+        
+        # 清除界面显示
+        self.conversation_text.clear()
+        
+        # 更新状态
+        self.update_status("已开始新对话")
+    
     def closeEvent(self, event):
         """Handle application close event"""
         # Stop any running threads
         if self.recorder and self.recorder.isRunning():
             self.recorder.stop()
             
-        if self.tts_thread and self.tts_thread.isRunning():
-            self.tts_thread.stop()
-            # Wait for the thread to finish before proceeding with close
-            self.tts_thread.wait()
+        if self.tts_processor:
+            self.tts_processor.stop()
         
         # Remove any existing LLM thread
         if self.llm_thread and self.llm_thread.isRunning():

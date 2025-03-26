@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eidolon Assist - Modern Voice & Vision Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Particle Background -->
+    <div id="particles-js"></div>
+    
+    <!-- Glowing Orbs -->
+    <div class="glow-container">
+        <div class="glow-orb glow-purple"></div>
+        <div class="glow-orb glow-blue"></div>
+        <div class="glow-orb glow-teal"></div>
+    </div>
+    
+    <!-- Animated Background Shapes -->
+    <div class="shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+        <div class="shape shape3"></div>
+        <div class="shape shape4"></div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <div class="logo-glow"></div>
+                <h1 class="logo">Eidolon<span>Assist</span></h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#features" class="nav-link">Features</a></li>
+                    <li><a href="#demo" class="nav-link">Demo</a></li>
+                    <li><a href="#download" class="nav-link">Download</a></li>
+                    <li><a href="#about" class="nav-link">About</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <section class="hero">
+                <div class="hero-content">
+                    <h1 class="animated-text">Your AI Assistant with Voice & Vision</h1>
+                    <p class="subtitle">A sleek, modern interface with powerful capabilities powered by advanced AI models</p>
+                    <div class="hero-buttons">
+                        <a href="#download" class="btn btn-primary">
+                            <i class="fas fa-download"></i> Download Now
+                        </a>
+                        <a href="#features" class="btn btn-secondary">
+                            <i class="fas fa-info-circle"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <div class="app-preview">
+                        <div class="screen-mock">
+                            <div class="screen-content">
+                                <div class="chat-mock">
+                                    <div class="chat-bubble user">Take a screenshot of this chart and explain the trends</div>
+                                    <div class="chat-bubble assistant">
+                                        <div class="typing-animation">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="controls-mock">
+                                    <div class="control-button"></div>
+                                    <div class="control-button"></div>
+                                    <div class="control-button"></div>
+                                </div>
+                            </div>
+                            <div class="screen-reflection"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="features" class="features">
+                <h2 class="section-title">Powerful <span class="highlight">Features</span></h2>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-microphone"></i>
+                            <div class="pulse-ring"></div>
+                        </div>
+                        <h3>Voice Commands</h3>
+                        <p>Speak naturally with customizable hotkeys to control recording</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-camera"></i>
+                            <div class="pulse-ring"></div>
+                        </div>
+                        <h3>Image Analysis</h3>
+                        <p>Capture and analyze screenshots with powerful image recognition</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-volume-up"></i>
+                            <div class="pulse-ring"></div>
+                        </div>
+                        <h3>Natural Speech</h3>
+                        <p>High-quality text-to-speech with customizable voices</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-sliders-h"></i>
+                            <div class="pulse-ring"></div>
+                        </div>
+                        <h3>Customizable</h3>
+                        <p>Configure API keys, models, voices, hotkeys and more</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-brain"></i>
+                            <div class="pulse-ring"></div>
+                        </div>
+                        <h3>AI-Powered</h3>
+                        <p>Compatible with leading language models for intelligent responses</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-history"></i>
+                            <div class="pulse-ring"></div>
+                        </div>
+                        <h3>Conversation History</h3>
+                        <p>Keep track of your interactions and start new conversations anytime</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="demo" class="demo">
+                <div class="demo-container">
+                    <h2 class="section-title">See It In <span class="highlight">Action</span></h2>
+                    
+                    <div class="demo-wrapper">
+                        <div class="demo-screen">
+                            <div class="demo-animation">
+                                <!-- Animation will be handled by CSS -->
+                                <div class="demo-step step1 active">
+                                    <div class="step-content">
+                                        <div class="record-animation"></div>
+                                        <p>Speak or type your query</p>
+                                    </div>
+                                </div>
+                                <div class="demo-step step2">
+                                    <div class="step-content">
+                                        <div class="process-animation"></div>
+                                        <p>AI processes your request</p>
+                                    </div>
+                                </div>
+                                <div class="demo-step step3">
+                                    <div class="step-content">
+                                        <div class="response-animation"></div>
+                                        <p>Get intelligent responses</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="demo-text">
+                            <div class="demo-controls">
+                                <button class="demo-control active" data-step="1">1. Ask</button>
+                                <button class="demo-control" data-step="2">2. Process</button>
+                                <button class="demo-control" data-step="3">3. Respond</button>
+                            </div>
+                            <p class="demo-description">
+                                Experience the seamless interaction flow of Eidolon Assist. 
+                                Simply speak your query with a hotkey, or type directly into the interface. 
+                                The assistant processes your request with state-of-the-art AI models
+                                and responds both visually and with natural-sounding speech.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="download" class="download">
+                <h2 class="section-title">Ready to <span class="highlight">Experience</span> It?</h2>
+                
+                <div class="requirements-container">
+                    <div class="requirements">
+                        <h3>Requirements</h3>
+                        <ul>
+                            <li><i class="fab fa-python"></i> Python 3.7+</li>
+                            <li><i class="fas fa-box"></i> PyQt6</li>
+                            <li><i class="fas fa-key"></i> Groq API key (for Whisper transcription)</li>
+                            <li><i class="fas fa-key"></i> OpenAI-compatible API key (for AI responses)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="install-steps">
+                        <h3>Installation</h3>
+                        <div class="code-block">
+                            <code>
+                                <span class="comment"># Clone the repository</span>
+                                git clone https://github.com/franklyc/eidolon-assist.git
+                                <br><br>
+                                <span class="comment"># Install dependencies</span>
+                                pip install -r requirements.txt
+                                <br><br>
+                                <span class="comment"># Run the application</span>
+                                python eidolon_assist.py
+                            </code>
+                            <button class="copy-btn" title="Copy to clipboard">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="download-buttons">
+                    <a href="https://github.com/franklyc/eidolon-assist" class="btn btn-primary btn-large">
+                        <i class="fab fa-github"></i> GitHub Repository
+                    </a>
+                </div>
+            </section>
+            
+            <section id="about" class="about">
+                <h2 class="section-title">About <span class="highlight">Eidolon Assist</span></h2>
+                
+                <div class="about-content">
+                    <p>
+                        Eidolon Assist is a personal assistant application designed to provide a modern, seamless interface for 
+                        interacting with advanced AI models. Combining voice, text, and image capabilities in a elegant UI with 
+                        rounded corners, gradients, and blur effects.
+                    </p>
+                    <p>
+                        Built with Python and PyQt6, this open-source project aims to make AI interaction more accessible and 
+                        natural. The application supports various language models and can be customized to fit your specific needs.
+                    </p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <h2>Eidolon<span>Assist</span></h2>
+                    <p>Modern Voice & Vision Assistant</p>
+                </div>
+                <div class="footer-links">
+                    <h3>Links</h3>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#demo">Demo</a></li>
+                        <li><a href="#download">Download</a></li>
+                        <li><a href="#about">About</a></li>
+                    </ul>
+                </div>
+                <div class="footer-social">
+                    <h3>Connect</h3>
+                    <div class="social-icons">
+                        <a href="#" class="social-icon"><i class="fab fa-github"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-linkedin"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 Eidolon Assist. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="particles.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
+

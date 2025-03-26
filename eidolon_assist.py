@@ -179,6 +179,7 @@ class LLMThread(QThread):
     status_update = pyqtSignal(str)
     token_received = pyqtSignal(str)
     sentence_complete = pyqtSignal(str)
+    first_tokens_received = pyqtSignal(str)  # 新增信号：第一批tokens接收完成
     
     def __init__(self, messages, settings, image_paths=None):
         super().__init__()
@@ -186,6 +187,12 @@ class LLMThread(QThread):
         self.settings = settings
         self.image_paths = image_paths or []
         self.current_sentence = ""
+        self.first_response_chunk = ""  # 存储第一个响应块
+        self.first_chunk_size = 15  # 定义第一个响应块的大小（token数或字符数）
+        self.first_chunk_sent = False  # 标记是否已发送第一个响应块
+        self.accumulated_chars = 0  # 累计接收的字符数
+        self.sent_first_sentence = False  # 标记是否已发送过第一个句子
+        
         # Support both English and Chinese punctuation
         self.sentence_end_pattern = re.compile(r'[.!?。！？；;](\s|$)')
         
@@ -256,17 +263,43 @@ class LLMThread(QThread):
                     self.current_sentence += content
                     self.token_received.emit(content)
                     
-                    # Check if we have a complete sentence
+                    # 收集第一个响应块以便快速播放
+                    if not self.first_chunk_sent:
+                        self.first_response_chunk += content
+                        self.accumulated_chars += len(content)
+                        
+                        # 如果积累了足够的字符或收到了句子结束标记，发送第一个响应块
+                        if self.accumulated_chars >= self.first_chunk_size or self.sentence_end_pattern.search(content):
+                            self.first_tokens_received.emit(self.first_response_chunk.strip())
+                            self.first_chunk_sent = True
+                            self.sent_first_sentence = True  # 标记已发送第一个句子
+                            self.first_response_chunk = ""
+                    
+                    # 检查是否有完整句子
                     if self.sentence_end_pattern.search(content):
-                        # We found a sentence end, emit the sentence
+                        # 发现句子结束，发出完整句子信号（只有在第一个块已发送后，且不是第一个句子时才继续发送）
                         sentence = self.current_sentence.strip()
-                        if sentence:
+                        if sentence and self.first_chunk_sent and (not self.sent_first_sentence or 
+                                                                   sentence != self.first_response_chunk.strip()):
                             self.sentence_complete.emit(sentence)
                         self.current_sentence = ""
+                        self.sent_first_sentence = True  # 更新标记，表示已经处理了第一个句子
             
-            # Emit any remaining content as a sentence
+            # 如果还没发送过第一个块，但已经收到了内容，发送它
+            if not self.first_chunk_sent and self.first_response_chunk.strip():
+                self.first_tokens_received.emit(self.first_response_chunk.strip())
+                self.first_chunk_sent = True
+                self.sent_first_sentence = True
+            
+            # 发送剩余内容作为最后一个句子
             if self.current_sentence.strip():
-                self.sentence_complete.emit(self.current_sentence.strip())
+                # 如果已经发送过第一个块，且这不是第一个句子，作为后续句子发送
+                if self.first_chunk_sent and self.sent_first_sentence and self.current_sentence.strip() != self.first_response_chunk.strip():
+                    self.sentence_complete.emit(self.current_sentence.strip())
+                # 否则，如果这是唯一的响应，作为第一个块发送
+                elif not self.sent_first_sentence:
+                    self.first_tokens_received.emit(self.current_sentence.strip())
+                    self.sent_first_sentence = True
             
             self.status_update.emit("AI response complete")
             self.finished.emit(full_response)
@@ -1199,7 +1232,8 @@ class EidolonAssistApp(QMainWindow):
         self.llm_thread = LLMThread(messages, self.settings, self.screenshot_paths)
         self.llm_thread.status_update.connect(self.update_status)
         self.llm_thread.token_received.connect(self.append_assistant_response)
-        self.llm_thread.sentence_complete.connect(self.speak_text)
+        self.llm_thread.first_tokens_received.connect(self.speak_text)  # 连接首个文本块信号
+        self.llm_thread.sentence_complete.connect(self.speak_text)  # 后续完整句子信号
         self.llm_thread.finished.connect(self.llm_response_finished)
         self.llm_thread.start()
     
@@ -1222,7 +1256,8 @@ class EidolonAssistApp(QMainWindow):
         self.llm_thread = LLMThread(messages, self.settings, self.screenshot_paths)
         self.llm_thread.status_update.connect(self.update_status)
         self.llm_thread.token_received.connect(self.append_assistant_response)
-        self.llm_thread.sentence_complete.connect(self.speak_text)
+        self.llm_thread.first_tokens_received.connect(self.speak_text)  # 连接首个文本块信号
+        self.llm_thread.sentence_complete.connect(self.speak_text)  # 后续完整句子信号
         self.llm_thread.finished.connect(self.llm_response_finished)
         self.llm_thread.start()
     
@@ -1306,6 +1341,23 @@ class EidolonAssistApp(QMainWindow):
     
     def speak_text(self, text):
         """Convert text to speech and play it"""
+        # 创建一个类变量来跟踪已经发送到TTS队列的文本，避免重复
+        if not hasattr(self, '_last_tts_text'):
+            self._last_tts_text = set()
+            
+        # 检查文本是否已经被处理过
+        if text in self._last_tts_text:
+            self.update_status(f"跳过重复的TTS文本: '{text[:20]}...'")
+            return
+            
+        # 添加到已处理集合
+        self._last_tts_text.add(text)
+        
+        # 限制集合大小，避免内存无限增长
+        if len(self._last_tts_text) > 20:  # 只保留最近的20条文本记录
+            self._last_tts_text = set(list(self._last_tts_text)[-20:])
+            
+        # 添加到TTS处理队列
         self.tts_processor.add_text(text)
     
     def stop_tts(self):

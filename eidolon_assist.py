@@ -328,14 +328,19 @@ class TTSThread(QThread):
                 voice = self.settings["tts_voice"]
                 rate = self.settings.get("tts_speed", "+0%")
                 
-                # Convert volume from float (0.0-1.0) to string ("-100.0%" to "+100.0%")
+                # Format volume according to Edge TTS documentation
+                # Edge TTS expects volume as a string like "+0%" (default), "+50%" (louder) or "-50%" (quieter)
                 volume_float = self.settings.get("tts_volume", 1.0)
-                # Map 0.0-1.0 to a range between -50% and +50%
-                # 0.0 -> -50%, 0.5 -> 0%, 1.0 -> +50%
-                volume_percent = int((volume_float - 0.5) * 100)
-                volume = f"{volume_percent:+}%" if volume_percent != 0 else "+0%"
                 
-                # Create communicate object with voice and rate options
+                # Convert 0.0-1.0 to a percentage between -100% and +100%
+                # 0.0 -> -100%, 0.5 -> 0%, 1.0 -> +100%
+                volume_percent = int((volume_float * 2 - 1) * 100)
+                # Clamp to a reasonable range (-100% to +100%)
+                volume_percent = max(-100, min(100, volume_percent))
+                # Format as required by Edge TTS 
+                volume = f"{volume_percent:+d}%"
+                
+                # Create communicate object with voice, rate and volume options
                 communicate = edge_tts.Communicate(self.text, voice, rate=rate, volume=volume)
                 await communicate.save(temp_file)
             
@@ -1027,8 +1032,9 @@ class EidolonAssistApp(QMainWindow):
         if not full_response:
             return
             
-        # Speak the response
-        self.speak_text(full_response)
+        # We no longer need to speak the full response here
+        # The sentences are already being spoken via the sentence_complete signal
+        pass
     
     def add_to_conversation(self, speaker, message, append=True):
         """Add a message to the conversation history and display"""

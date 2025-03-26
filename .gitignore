@@ -1,2 +1,24 @@
 /references
 settings.json
+
+# Python virtual environment
+.venv/
+venv/
+ENV/
+
+# UV lock file
+uv.lock
+
+# Python version file
+.python-version
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/

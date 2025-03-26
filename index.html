@@ -198,7 +198,7 @@
                     <div class="requirements">
                         <h3>Requirements</h3>
                         <ul>
-                            <li><i class="fab fa-python"></i> Python 3.7+</li>
+                            <li><i class="fab fa-python"></i> Python 3.12+</li>
                             <li><i class="fas fa-box"></i> PyQt6</li>
                             <li><i class="fas fa-key"></i> Groq API key (for Whisper transcription)</li>
                             <li><i class="fas fa-key"></i> OpenAI-compatible API key (for AI responses)</li>
@@ -212,8 +212,11 @@
                                 <span class="comment"># Clone the repository</span>
                                 git clone https://github.com/franklyc/eidolon-assist.git
                                 <br><br>
-                                <span class="comment"># Install dependencies</span>
-                                pip install -r requirements.txt
+                                <span class="comment"># Install dependencies with uv (recommended)</span>
+                                uv pip install -e .
+                                <br><br>
+                                <span class="comment"># Or alternatively with pip</span>
+                                pip install -e .
                                 <br><br>
                                 <span class="comment"># Run the application</span>
                                 python eidolon_assist.py

@@ -1,0 +1,19 @@
+[project]
+name = "eidolon-assist"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "PyQt6",
+    "keyboard",
+    "sounddevice",
+    "soundfile",
+    "numpy",
+    "pyperclip",
+    "requests",
+    "Pillow",       
+    "edge-tts",
+    "groq",
+    "openai"
+]

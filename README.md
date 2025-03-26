@@ -15,7 +15,7 @@ A personal assistant with voice and image capabilities, featuring a modern UI wi
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.12+
 - PyQt6
 - Groq API key (for Whisper transcription)
 - OpenAI-compatible API key (for language model responses)
@@ -23,10 +23,16 @@ A personal assistant with voice and image capabilities, featuring a modern UI wi
 ## Installation
 
 1. Clone this repository
-2. Install the required packages:
+2. Install the required packages using uv:
 
 ```
-pip install -r requirements.txt
+uv pip install -e .
+```
+
+Or alternatively:
+
+```
+pip install -e .
 ```
 
 3. Run the application:
